@@ -1,0 +1,243 @@
+---
+title: "Homework 5"
+author: "Kalvin Goode, Amil Khan"
+date: "__Due on November 18, 2018 at 11:59 pm__"
+output: pdf_document
+urlcolor: blue
+
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE, 
+                      cache=FALSE, 
+                      results = "markup",
+                      fig.width=9, 
+                      fig.height=4,
+                      fig.ext = ".pdf",
+                      fig.align='center')
+indent1 = '    '
+indent2 = paste(rep(indent1, 2), collapse='')
+indent3 = paste(rep(indent1, 3), collapse='')
+r = function(x, digits=2){ round(x, digits=digits) }
+library(tidyverse)
+library(reshape2)
+library(ggplot2)
+library(HDInterval)
+library(reshape2)
+library(magrittr)
+amil <- theme_classic() +
+  theme(plot.background=element_rect(fill="white"),
+                                plot.title = element_text(color = "#415B76", size = 23, face = "bold"),
+                                plot.subtitle = element_text(face = "italic", color = "#6B95C2", size = 15),
+                                plot.caption = element_text(size = 8, color = "#01526D", face = "italic"),
+                                panel.grid.minor=element_blank(),
+                                panel.grid.major.y=element_line(color = "#C2C2C2", linetype = "dashed"),
+                                panel.grid.major.x=element_blank(),
+                                panel.background = element_rect(fill = "#F7F7F7"),
+                                panel.border = element_blank(), 
+                                axis.title=element_text(color = "#415B76", size = 14),
+                                axis.line = element_line(color = "#415B76", size = 1.5, lineend = "square"),
+                                axis.ticks=element_blank(),
+                                axis.text.x = element_text(color="#415B76",   size = 12),
+                                axis.text.y = element_text(color="#415B76",   size = 12),
+                                legend.text = element_text(color="#415B76",   size = 12),
+                                legend.title = element_text(color="#01526D",   size = 13))
+```
+
+__Note:__ If you are working with a partner, please submit only one homework per group with both names and whether you are taking the course for graduate credit or not.  Submit your Rmarkdown (.Rmd) and the compiled pdf on Gauchospace.
+ 
+
+# Problem 1
+**Frequentist Coverage of The Bayesian Posterior Interval**.  In quiz 1 we explored the importance and difficulty of well-calibrated prior distributions by examining the calibration of subjective intervals.  Suppose that $y_1,..,y_n$ is an IID sample from a $Normal(\mu, 1)$.  We wish to estimate $\mu$.  
+
+### Part a.)
+
+For Bayesian inference, we will assume the prior distribution $\mu \sim Normal(0,\frac{1}{\kappa_0})$ for all parts below. State the posterior distribution of $\mu$ given $y_1,..,y_n$, and the $95\%$ quantile-based posterior credible interval for $\mu$. \newline
+
+\textit{Solution.} \newline
+
+__Prior Distribution__: $\mu \thicksim Normal(0,\frac{1}{\kappa_0})$ \newline
+__Posterior Distribution__: $\mu \mid y_1, \dots, y_n \thicksim \textrm{N} \left( 0, \frac{1}{\kappa_n} \right)$   \newline
+__Quantile-based Posterior Credible Interval for $\mu$__ $: \bar{\mu} \pm 1.96\sqrt{\frac{\bar{\mu}(1-\bar{\mu})}{n}}$
+
+
+### Part b.)
+
+Now we will evaluate the frequentist coverage of the credible interval on simulated data.  Generate 1000 data sets where the true value of $\mu=0$ and $n=10$.  For each dataset, compute the posterior $95\%$ interval and see if it covers the true value of $\mu = 0$.  Compute the frequentist coverage as the fraction of these 1000 posterior 95\% credible intervals that contain $\mu=0$.  Do this for each value of $\kappa_0 = 1, 2, ..., 25$.  Plot the coverage as a function of $\kappa_0$.
+
+```{r}
+
+vec <- vector()
+for (k in 1:25) {
+  cnt = 0
+  for (i in 1:1000){
+  S = rnorm(10)
+  mu = (10*mean(S)) / (10+k)
+  sd = sqrt(1/(10+k))
+  ci = qnorm(c(0.05,0.95), mu, sd)
+  #print(ci)
+  if ((ci[1] <=0) & (ci[2] >=0)) {
+    cnt = cnt+1
+  }
+  }
+  vec = c(vec, cnt)
+}
+ggplot()+geom_point(aes(1:25, vec/1000), size=3, col="#95AB63")+amil+
+ggtitle("Coverage as a f(k_0)")+xlab("k_0")+ylab("Fraction Covered")
+```
+
+    
+### Part c.)
+
+Repeat the previous part but now generate data assuming the true $\mu=1$.
+
+```{r}
+
+vec <- vector()
+for (k in 1:25) {
+  cnt = 0
+  for (i in 1:1000){
+  S = rnorm(10,1)
+  mu = (10*mean(S)) / (10+k)
+  sd = sqrt(1/(10+k))
+  ci = qnorm(c(0.05,0.95), mu, sd)
+  #print(ci)
+  if ((ci[1] <=0) & (ci[2] >=0)) {
+    cnt = cnt+1
+  }
+  }
+  vec = c(vec, cnt)
+}
+ggplot()+geom_point(aes(1:25, vec/1000), size=3, col="#95AB63")+amil+
+ggtitle("Coverage as a f(k_0)")+xlab("k_0")+ylab("Fraction Covered")
+```
+
+### Part d.)
+Explain the differences between the two plots. For what values of $\kappa_0$ do you see closer to nominal coverage (i.e. 95\%)?  For what values does your posterior interval tend to overcover (the interval covers the true value more than 95\% of the time)? Undercover (the interval covers the true value less than 95\% of the time)?  Why does this make sense?
+
+_Solution._
+
+In the first plot, we see our coverage for the true value $\mu=0$ plateaus around $\kappa_0=15$. Values below $\kappa_0=5$ cover the true value less than 95\% of the time, while values above $\kappa_0=6$ overcover the true value. Conversely, for the true value $\mu = 1$, we see that our coverage of the true value increases as we increase the number of $\kappa_0$. 
+
+\pagebreak
+
+# Problem 2    
+**Modeling Election Outcomes**.  On November 4, 2014 residents of Kansas voted to elect a member of the United States Senate to represent the state.  After the
+primaries, there were four major contenders in the race: 1) Republican incumbent Pat Roberts, 2) Democrat Chad Taylor, 3) Independent Greg Orman, and 4) Liberatarian Randall Batson. 
+
+For this problem we will reference polling data that can be found
+here:
+
+\url{http://en.wikipedia.org/wiki/United_States_Senate_election_in_Kansas,_2014#Polling_3}
+
+In mid-August 2014 a SurveyUSA poll of 560 people found the following
+vote preferences:
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{cccccc}
+      \hline
+     & Pat Roberts & Chad Taylor & Greg Orman & Randall Batson & Undecided \\ 
+      \hline
+     & 37\% & 32\% & 20\% & 4\% & 7\% \\ 
+       \hline
+    \end{tabular}
+    \end{table}
+
+Ignoring the ``undecided votes'', the maximum likelihood estimate
+for the true vote shares of each candidate assuming, assuming a multinomial
+distribution over the 4 candidates, is simply the fraction of people.
+
+### Part a.)
+
+Assume that you first interview the $7\%$ of undecided voters.  They claim they are equally likely to vote for any of the four candidates.  Before reviewing the other survey data, you decide to use this information to construct a prior distribution for the true vote shares of the four candidates.  What is the prior distribution and what are it's parameters (think pseudocounts)?  Given the survey data above and the prior, specify the posterior distribution for the vote shares of the four candidates and the parameters of this distribution.  
+
+_Solution._ \newline
+```{r, results='markup'}
+count1=560*0.25*0.07
+vote1=c(37,32,20,4)
+post1=vote1*560/100+count1
+cat("Our assumption for prior distribution is
+Dirichlet(",count1,",",count1,",",count1,",",count1,").
+Then, the posterior distribution is Dirichlet(",post1[1],",",post1[2],",",post1[3],",",post1[4],").")
+``` 
+
+
+### Part b.)
+On September 3, 2014 Democratic nominee Chad Taylor withdrew from the
+race.  Assume that amongst those who said they would vote for Taylor in
+the August survey, 70\% of them changed their vote to Orman,
+20\% to the Libertarian, Baston, and the remaining 10\% for Roberts.
+The above information should be used construct a new prior distribution for the 3-candidate race again
+assuming that the undecided voters from the August poll will now vote
+equally among the remaining three candidates.  Calculate the new
+posterior distribution over the vote shares for the 3 remaining
+candidates.  Use Monte Carlo to find the posterior probability that more people in Kansas support Pat Roberts than Greg Orman.
+
+_Solution._ \newline
+```{r, results='markup'}
+count2=c(0.1,0.7,0.2)*0.32*560+count1
+vote2=c(37,20,4)
+post2=vote2*560/100+count2
+probability=mean(rgamma(100000,post1)>rgamma(100000,post2))
+cat("Our assumption for prior distribution is
+Dirichlet(",count2[1],",",count2[2],",",count2[3],").
+The posterior distribution is Dirichlet(",post2[1],",",post2[2],",",post2[3],").
+In posterior distribution, the probability that more people in 
+Kansas support Pat Roberts than Greg Orman is ", probability,".")
+```
+
+### Part c.) 
+
+ From October 22-26, 2014 SurveyUSA released a poll of 623 found the following preferences:\linebreak
+      \begin{table}[h!]
+      \centering
+      \begin{tabular}{cccccc}
+        \hline
+       & Pat Roberts & Chad Taylor & Greg Orman & Randall Batson & Undecided \\ 
+        \hline
+       & 42\% & -- & 44\% & 4\% & 10\% \\ 
+         \hline
+      \end{tabular}
+      \end{table}
+
+Use the posterior from the previous part as the prior for this new survey.  Compute a new posterior given the new survey data above.  Assume that the population consists of 100,000 eligible voters.  However, not all eligible voters actually vote.  In fact, roughly between 30-50\% and eligible voters actually turn out in a midterm election [https://www.fairvote.org/voter_turnout#voter_turnout_101](https://www.fairvote.org/voter_turnout#voter_turnout_101).  You express your uncertainty by assuming that the fraction of eligible voters who actually turn out is a Beta(40, 60) random variable. Assuming a random sample of eligible voters actually turn out, generate 10000 samples from the posterior predictive distribution.  Use Monte Carlo to answer the following questions.  
+  
+#### _Part C.1_
+Greg Orman's team believes that if they can get at least 20000 votes they will win the election.  What is the posterior predictive probability that Greg Orman receives at least 20000 votes _and_ wins the election?
+
+_Solution._ \newline
+```{r, results='markup'}
+count3=c(42,44,4)*623/100
+post3=post2+count3
+t1=rgamma(10000,post3[1])
+t2=rgamma(10000,post3[2])
+t3=rgamma(10000,post3[3])
+votes1=t1/(t1+t2+t3)*rbeta(10000,40,60)
+votes2=t2/(t1+t2+t3)*rbeta(10000,40,60)
+votes3=t3/(t1+t2+t3)*rbeta(10000,40,60)
+probability2=mean((votes1>0.2)&(votes1>votes2)&(votes1>votes3))
+cat("The posterior pridictive probility predicts that Greg Orman receives
+at least 20000 votes and wins the election is",probability2)
+```
+
+#### _Part C.2_
+Both leading candidates fear that the third party vote is taking away potential supporters.  What is the posterior predictive probability that the difference between Greg Orman and Pat Roberts is smaller than then vote total for Randall Batson.  
+
+_Solution._ \newline
+```{r, results='markup'}
+probability3=mean(abs(votes1-votes2)<votes3)
+cat("The posterior predictive probility predicts that the difference between Greg Orman
+and Pat Roberts is smaller than then vote total for Randall Batson is",probability3)
+```
+
+### Part d.)
+Discuss the assumptions that were made to generate your
+predictions.   If you think some assumptions were poor, how might you
+change the model to improve upon them?  This is an open-ended question
+with no right or wrong answers and will be graded on thoughtfullness and effort only.
+
+_Solution._ \newline
+One assumption is that each person voting for the candidate is identical independent distribution. We can improve model by studying the historical preferred party for any voter and also review historical rate of voting within a region.
+

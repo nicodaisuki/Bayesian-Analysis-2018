@@ -1,0 +1,178 @@
+---
+title: "Homework 6"
+author: "Kalvin Goode, Amil Khan"
+date: "December 8, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE, 
+                      cache=FALSE, 
+                      results = "hide",
+                      fig.width=9, 
+                      fig.height=4,
+                      fig.ext = ".pdf",
+                      fig.align='center')
+
+r = function(x, digits=2){ round(x, digits=digits) }
+library(tidyverse)
+library(reshape2)
+library(ggplot2)
+library(coda)
+library(MASS)
+amil <- theme_classic() +
+  theme(plot.background=element_rect(fill="white"),
+                                plot.title = element_text(color = "black", size = 18, face = "bold"),
+                                plot.subtitle = element_text(face = "italic", color = "grey", size = 13),
+                                plot.caption = element_text(size = 8, color = "#01526D", face = "italic"),
+                                panel.grid.minor=element_blank(),
+                                panel.grid.major.y=element_line(color = "#C2C2C2", linetype = "dashed"),
+                                panel.grid.major.x=element_blank(),
+                                panel.background = element_rect(fill = "white"),
+                                panel.border = element_blank(), 
+                                axis.title=element_text(color = "black", size = 13),
+                                axis.line = element_line(color = "black", size = 1.25, lineend = "square"),
+                                axis.ticks=element_blank(),
+                                axis.text.x = element_text(color="black",   size = 12),
+                                axis.text.y = element_text(color="black",   size = 12),
+                                legend.text = element_text(color="black",   size = 12),
+                                legend.title = element_text(color="black",   size = 13))
+```
+
+\section{Logistic Regression for Toxicity Data}
+\label{sec:introduction}
+A pest control company is testing the efficacy of a poison by exposing adult flour beetles to a gaseous
+compound. Their experiments proceed by administering various dose levels of the poison to to batches of
+beetles. The beetles’ responses are typically characterized by a binary outcome (e.g. dead or alive). An
+experiment of this kind gives rise to data where each observation is a triplet $(x_i, n_i
+, y_i)$. $x_i$ represents the log dosage in group $i$ given to $n_i$ beetles, of which $y_i$ end up dying as a result of exposure. The company runs 4
+experiments, each at a different dosages, on 5 beetles each. The resulting data can be seen below:
+
+\subsection*{Part a.)}
+Solve for $\theta_i(x_i)$ as a function of $\alpha$ and $\beta$ by inverting the logit function. Use this to write out the joint sampling distribution, $\prod^N_{i=1} p(y_i \mid \alpha, \beta, x_i, n_i$). 
+
+
+\textit{Solution.} 
+
+Assume that the number of beetle deaths $Y_i$ given a chemical dosage, $x_i$, is $$Y_i \sim \text{Binomial}(\theta(x_i), n_i)$$ where $\theta(x_i)$ is the probability of death given dosage $x_i$. We will assume that logit$(\theta_i(x_i))=\alpha +\beta x_i$, where logit$(\theta)$ is defined as $\log \left( \frac{\theta}{1-\theta} \right)$. Hence substituting in what we know,
+\begin{align*}
+\text{logit}(\theta_i(x_i)) &= \alpha + \beta x_i \\
+\log\left( \frac{\theta_i(x_i)}{1-\theta_i(x_i)} \right) &= \alpha + \beta x_i 
+\end{align*}
+To get rid of the $\log$, we exponentiate both sides and multiply both sides by $(1- \theta_i(x_i))$, which gives us
+\begin{align*}
+\exp^{\log\left( \frac{\theta_i(x_i)}{1-\theta_i(x_i)} \right)} &= \exp^{\alpha + \beta x_i} \\
+\theta_i(x_i) &= \exp^{\alpha + \beta x_i} (1- \theta_i(x_i))
+\end{align*}
+Next, we simply distribute and factor both sides to solve for $\theta_i(x_i)$, which gives us,
+\begin{align*}
+\theta_i(x_i)(1+ \exp^{\alpha +\beta x_i}) &= \exp^{\alpha +\beta x_i} \\
+\theta_i(x_i) &= \dfrac{ \exp^{\alpha +\beta x_i} }{1+\exp^{\alpha +\beta x_i} }
+\end{align*}
+Finally we will write out the joint sampling distribution, $\prod^N_{i=1} p(y_i \mid \alpha, \beta, x_, n_i)$, and simplify,
+\begin{align*}
+& \prod_{i=1}^N \binom{n_i}{y_i} \left(\theta_i(x_i))^{y_i} (1-\theta_i(x_i)\right)^{n_i-y_i} \\
+ \propto & \prod_{i=1}^N \binom{n_i}{y_i} \left(\dfrac{ \exp^{\alpha +\beta x_i} }{1+\exp^{\alpha +\beta x_i} }\right)^{y_i} \left(1-\dfrac{ \exp^{\alpha +\beta x_i} }{1+\exp^{\alpha +\beta x_i} }\right)^{n_i-y_i} \\
+ \propto &\left(\dfrac{ \exp^{\alpha +\beta x_i} }{1+\exp^{\alpha +\beta x_i} }\right)^{\sum y_i} \left(1-\dfrac{ \exp^{\alpha +\beta x_i} }{1+\exp^{\alpha +\beta x_i} }\right)^{\sum n_i-y_i}
+\end{align*}
+
+\subsection*{Part b.)}
+The dose at which there is a 50\% chance of being lethal, $\theta(x_i)=0.5$ is known as LD50, and is often of interest in toxicology studies of this type. Solve for LD50 as a function of $\alpha$ and $\beta$.
+
+\textit{Solution.} 
+
+
+For $\theta(x_i) = 0.5$, we have, 
+\begin{align*}
+    \prod_{i=1}^N \left(\theta_i(x_i))^{y_i} (1-\theta_i(x_i)\right)^{n_i-y_i} \implies  &  \prod_{i=1}^N \left(0.5)^{y_i} (0.5\right)^{n_i-y_i} \\
+     \propto & \ (0.5)^{\sum y_i} (0.5)^{\sum n_i-y_i} 
+\end{align*}
+So, using what we found earlier,
+\begin{align*}
+\theta_i(x_i) &= \dfrac{ \exp^{\alpha +\beta x_i} }{1+\exp^{\alpha +\beta x_i} } \\
+0.5 &= \dfrac{ \exp^{\alpha +\beta x_i} }{1+\exp^{\alpha +\beta x_i} } \\
+\exp^{\alpha + \beta x_i} &= \dfrac{0.5}{1-0.5}
+\end{align*}
+Taking the log of both sides and solving for $x_i$,
+\begin{align*}
+\alpha +\beta x_i &= \log \left( \dfrac{0.5}{1-0.5} \right)\\
+\alpha &=-\beta x_i \\
+x_i &= -\dfrac{\alpha}{\beta}
+\end{align*}
+
+
+\subsection*{Part c.)}
+```{r, results='markup'}
+x <- c(-0.86, -0.3, -0.05, 0.73)
+n <- rep(5,4)
+y <- c(0,1,3,5)
+a = 1
+b = 1
+theta_x <- exp(a+b*x)/(1+exp(a+b*x))
+logp = function(theta) 
+  sum(dnorm(theta,n*theta_x,n*theta_x*(1-theta_x),log=TRUE))
+metropolis = function(theta_s, cov) 
+{
+  theta_p = mvrnorm(1, theta_s, cov)
+  if(logp(theta_p)>logp(theta_s)) 
+    return(theta_p)
+  else 
+  {
+    r = runif(1)
+    if(log(r) < (logp(theta_p) - logp(theta_s))) 
+      return(theta_p)
+    else 
+      return(theta_s) 
+  }
+}
+rw_metrop_multi = function(theta_0, death, draws, cov) 
+{
+  samples=matrix(0,ncol=length(theta_0),nrow=death+draws)
+  samples[1,]=theta_0
+  for(i in 1:(nrow(samples) - 1)) 
+    samples[i + 1,] = metropolis(samples[i,], cov)
+  samples[death:(death + draws),]
+}
+samples = rw_metrop_multi(c(10, 10), 1000, 10000, matrix(c(1, 0, 0, 1), nrow = 2))
+plot(as.mcmc(samples))
+effectiveSize(samples)
+acf(samples)
+ggplot()+geom_point(aes(samples[,1], samples[,2]))+amil+ggtitle("Plot of Posterior", "Generated Samples")+xlab("Sample 1")+ylab("Sample 2")
+ggplot()+geom_histogram(aes(samples[,1]), binwidth=0.1, fill="black", col="white") +amil+ggtitle("Histograms for Posterior", "Generated Samples 1")+xlab("Sample 1")
+ggplot()+geom_histogram(aes(samples[,2]), binwidth=0.1, fill="black", col="white") +amil+ggtitle("Histograms for Posterior", "Generated Samples 2")+xlab("Sample 2")
+```
+
+
+## Part d.)
+
+```{r, results='markup', echo=TRUE}
+xgrid <- seq(-1, 1, by = 0.01)
+samples <- rw_metrop_multi(c(10, 10), 1000, 10000, matrix(c(5, 2.5, 2.5, 5), nrow = 2))
+length(samples)
+compute_curve <- function(samp) {
+beta_0 <- samp[1]
+beta_1 <- samp[2]
+beta_0 + beta_1 * xgrid
+}
+res <- apply(samples, 1, compute_curve)
+quantiles <- apply(res, 1, function(x) quantile(x, c(0.025, 0.25, 0.75, 0.975)))
+posterior_mean <- rowMeans(res)
+effectiveSize(samples)
+plot(as.mcmc(samples))
+effectiveSize(samples)
+acf(samples)
+```
+
+
+
+## Part e.)
+```{r}
+tibble(x=xgrid, q025=quantiles[1, ], q25=quantiles[2, ],
+q75=quantiles[3,], q975=quantiles[4, ], mean=posterior_mean) %>% ggplot() +
+geom_ribbon(aes(x=xgrid, ymin=q025, ymax=q975), alpha=0.2) +
+geom_ribbon(aes(x=xgrid, ymin=q25, ymax=q75), alpha=0.5) +
+geom_line(aes(x=xgrid, y=posterior_mean), size=1)+amil+ggtitle("Confidence Band", "Probability of Death")
+```
+
+

@@ -1,0 +1,82 @@
+---
+title: "Pstat 115 HW3"
+author: "Kalvin Goode and Amil"
+date: "2018/10/27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(tidyverse)
+set.seed(1)
+y_A=c(12,9,12,14,13,13,15,8,15,6)
+y_B=c(11,11,10,9,9,8,7,10,6,8,8,9,7)
+diff_theta=1:50
+diff_y=1:50
+samples=100000
+```
+
+1.
+(a)
+By conjugation, we know that the posterior distributions are $\theta_A|y_A\sim gamma(120+\sum y_A,10+10)$ and $\theta_B|y_B\sim gamma(12+\sum y_A,1+13)$.
+
+```{r}
+for(no in 1:50)
+{
+  gamma_A=rgamma(samples,120+sum(y_A),10+length(y_A))
+  gamma_B=rgamma(samples,12*no+sum(y_B),no+length(y_B))
+  diff_theta[no]=mean(gamma_A>gamma_B)
+}
+plot(diff_theta,xlab="no",ylab="P(theta_B<theta_A)")
+```
+
+From the plot, we see that as $n_0$ increase,the probability of the event decrease. This shows that the event is sensitve to the prior distribution on $\theta_B$ since there is a linear relationship.
+
+(b)
+```{r}
+for(no in 1:50)
+{
+  gamma_A=rgamma(samples,120+sum(y_A),10+length(y_A))
+  gamma_B=rgamma(samples,12*no+sum(y_B),no+length(y_B))
+  y_tilda_a=rpois(samples,gamma_A)
+  y_tilda_b=rpois(samples,gamma_B)
+  diff_y[no]=mean(y_tilda_a>y_tilda_b)
+}
+plot(diff_y,xlab="no",ylab="P(tilde(Y)_B < tilde(Y)_A)")
+```
+
+We see that as $n_0$ increases, the probability of the event $\tilde{Y}_B<\tilde{Y}_A$ decreases. In addition, this event is more sensitive to $n_0$ then the event in part (a). We see that as $n_0>45$, the $P(\tilde{Y}_B<\tilde{Y}_A)\approx 0.5$.
+
+(c)
+Calculating the probability of the event $\theta_B<\theta_A$ which the expection of mice B of the rate of tumor is lower than the expection of mice A of the rate of tumor. On the other hand, calculating the probability of the event $\tilde{Y}_B<\tilde{Y}_A$ which the rate of tumor of random mice B is lower than the rate of tumor of mice A.
+
+
+2.
+(a)
+If Poisson model was reasonable, then $t^{(s)}=1 $ because Poisson model has the same mean and vairance.
+
+(b)
+```{r}
+set.seed(1)
+gamma_A=rgamma(samples,120+sum(y_A),10+length(y_A))
+poisson_A=matrix(sapply(gamma_A,rpois,n=1),ncol=30)
+t_A=rowMeans(poisson_A)/apply(poisson_A,1,var)
+hist(t_A,xlab="t^(s)",main="Histogram of t^(s)")
+cat("In this historgram, 95% confidence interval is between (", quantile(t_A,0.025),",",quantile(t_A,0.975),").")
+cat("We see that 1 is in this confidence interval. In addition, ")
+cat("The mean of t^(s) is",mean(t_A), "which is close to the theoretical calculation for Poisson distribution")
+cat("It shows that this model is reasonable to use Poisson distribution.")
+```
+
+(c)
+```{r}
+gamma_B=rgamma(samples,156+sum(y_B),13+length(y_B))
+poisson_B=matrix(sapply(gamma_B,rpois,n=1),ncol=30)
+t_B=rowMeans(poisson_B)/apply(poisson_B,1,var)
+hist(t_B,xlab="t^(s)",main="Histogram of t^(s)")
+cat("In this historgram, 95% confidence interval is between (", quantile(t_B,0.025),",",quantile(t_B,0.975),").")
+cat("We see that 1 is in this confidence interval. In addition, ")
+cat("The mean of t^(s) is",mean(t_B), "which is close to the theoretical calculation for Poisson distribution")
+cat("It shows that this model is reasonable to use Poisson distribution.")
+```
+

@@ -1,0 +1,222 @@
+---
+title: "Homework 4"
+author: "Amil Khan, Kalvin "
+date: "__Due on November 11, 2018 at 11:59 pm__"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE, 
+                      cache=FALSE, 
+                      results = "hide",
+                      fig.width=9, 
+                      fig.height=4,
+                      fig.ext = ".pdf",
+                      fig.align='center')
+indent1 = '    '
+indent2 = paste(rep(indent1, 2), collapse='')
+indent3 = paste(rep(indent1, 3), collapse='')
+r = function(x, digits=2){ round(x, digits=digits) }
+library(tidyverse)
+library(reshape2)
+library(ggplot2)
+library(HDInterval)
+
+amil <- theme_classic() +
+  theme(plot.background=element_rect(fill="white"),
+                                plot.title = element_text(color = "#415B76", size = 23, face = "bold"),
+                                plot.subtitle = element_text(face = "italic", color = "#01526D", size = 16),
+                                plot.caption = element_text(size = 8, color = "#01526D", face = "italic"),
+                                panel.grid.minor=element_blank(),
+                                panel.grid.major.y=element_line(color = "#C2C2C2", linetype = "dashed"),
+                                panel.grid.major.x=element_blank(),
+                                panel.background = element_rect(fill = "#F7F7F7"),
+                                panel.border = element_blank(), 
+                                axis.title=element_text(color = "#415B76", size = 14),
+                                axis.line = element_line(color = "#415B76", size = 1.5, lineend = "square"),
+                                axis.ticks=element_blank(),
+                                axis.text.x = element_text(color="#415B76",   size = 12),
+                                axis.text.y = element_text(color="#415B76",   size = 12),
+                                legend.text = element_text(color="#415B76",   size = 12),
+                                legend.title = element_text(color="#01526D",   size = 13))
+```
+
+__Note:__ If you are working with a partner, please submit only one homework per group with both names and whether you are taking the course for graduate credit or not.  Submit your Rmarkdown (.Rmd) and the compiled pdf on Gauchospace.
+ 
+# Problem 1 
+
+Importance sampling of the Galenshore distribution. A $Galenshore(\alpha,\theta)$ distribution has density: 
+    $$p\left(y\right)=\frac{2}{\Gamma\left(\alpha\right)}\theta^{2\alpha}y^{2\alpha-1}e^{-\theta^{2}y^{2}}$$ 
+    for $y > 0$, $\theta > 0$ and $\alpha > 0$.
+
+
+### Part a.)
+
+Assume $\alpha=1$ and $\theta=0.5$ .  For $k$ = 10, 100 and 1000,
+ draw samples of size $k$ from an Exponential(1) distribution.  Use these samples as important sampling proposals to estimate the mean of the Galenshore.  Compare your estimates for each $k$ to the true mean:
+$$E[Y|\alpha, \theta] = \dfrac{\Gamma(\alpha+1/2)}{\theta\Gamma(\alpha)} $$
+
+
+```{r}
+theta <- 0.5
+alpha <- 1
+true_mean <- gamma(alpha+1.0/2.0)/(theta*gamma(alpha))
+p <- function(a, t, y){
+  (2/gamma(alpha)) * theta^(2*alpha) * y^(2*alpha-1) * (exp(-1*theta^2*y^2))
+}
+
+
+N = 1000
+Ns = 1:N
+estimate = rep(0, N) 
+for(n in Ns) {
+x = rexp(1000)
+w = p(alpha, theta,x) / dexp(x)
+estimate[n] = sum(x * w) / sum(w)
+}
+plot(estimate)
+abline(h = true_mean, col="red")
+
+```
+		
+		
+### Part b.)
+
+Plot a histogram of the log importance weights for $k = 1000$.
+
+```{r}
+hist(p(alpha,theta, rexp(1000)) / dexp(rexp(1000)))
+```
+
+
+### Part c.)
+
+Now draw samples of size $k \in\{ 10, 100, 1000 \}$ from $Z \sim N(1.5, 1)$.  For each $k$, compute and print the estimated mean.  Plot the histogram of log importance weights for
+$k = 1000$ (exclude the points for which $Z < 0$ when plotting this
+histogram).  Based on the two histograms and the comparison between
+estimates and true mean, which proposal do you think is better?
+
+```{r results='markup'}
+q <- function(x){
+  rnorm(x, mean = 1.5, sd = 1)
+}
+
+norm_estimate <- rep(0, 1000)
+for(n in 1:1000) {
+  x <- rexp(n)
+  w = p(alpha, theta,x) / q(x)
+  norm_estimate[n] <- sum(x*w)/sum(w)
+}
+mean_estimate <- function(k) {
+  smple = q(k)
+  w = p(alpha, theta, smple) / dnorm(smple, 1.5, 1)
+  return(mean(smple*w) / mean(w))
+}
+mean_estimate(1000)
+mean(norm_estimate, na.rm = TRUE)
+#plot(norm_estimate)
+#abline(h = true_mean, col="red")
+```
+
+
+
+# Problem 2
+ Rejection Sampling for the Semi-Circle Distribution.  Let 
+    $$p(x|R)=\frac{2}{\pi R^2}\sqrt{R^2-x^2}\mathbf{1}\{x \in [-R, R]\}$$
+ 
+
+### Part a.)
+
+Identify a proposal distribution, $g(x \mid R)$ for rejection sampling.  Show that there exists some $M$ such that $Mg(x \mid R) \geq p(x|R)$ $\forall x \in [-R, R]$.  What is M? 
+    
+For rejection sampling, let $g(x|R)=\frac{1}{2R}\mathbf{1}_{[-R,R]}.$ 
+
+We see that, if $M=\frac{4}{\pi},$ then $p(x|R)=\frac{2}{\pi R^2}\sqrt{R^2-x^2}\mathbf{1}_{[-R,R]}\leq\frac{2}{\pi R}\mathbf{1}_{[-R,R]}=Mg(x|R)$.
+    
+### Part b.)
+
+Plot the semi-circle distribution for $R=1$ and your proposal distribution on the same plot using the `curve` function.  Note that because the density must be normalized to integrate to 1, the semi-circle distribution is really a "semi-ellipse".
+
+    
+```{r}
+p=function(x)
+{
+  if(x>1 | x< -1)
+    return (0)
+  return (2/pi*sqrt(1-x^2))
+}
+
+g=function(x)
+{
+  if(x>1 | x< -1)
+    return (0)
+  return (0.5)
+}
+h <- Vectorize(p);
+k <- Vectorize(g);
+curve(h,-1.5,1.5,n=200,xlab='x',ylab='y',main="Distributions")
+curve(k,add=TRUE,lty=3)
+```
+
+    
+### Part c.)
+For $R = 0.1, 0.2, ..., 3.0$, use rejection sampling to sample from $p(x|R)$.  Plot the sample variance for each value of $R$, and show graphically that the variance for the semi-circle distribution is $\frac{R^2}{4}$.
+    
+    
+```{r}
+R=seq(0.1,3,0.1)
+l=function(x,R)
+{
+  return(sqrt(R^2-x^2)/R/pi)
+}
+variances=function(R)
+{
+  s=5000
+  samples=runif(s,-R,R)
+  #runif is a uniform distribution
+  keep=l(samples,R)>runif(s)
+  return(var(samples[keep]))
+}
+m=function(x)
+{
+  return (x^2/4)
+}
+variance=sapply(R,variances)
+plot(R,variance)
+curve(m,add=TRUE)
+```
+
+\pagebreak
+
+# Problem 3
+
+Rejection sampling and interval estimation.
+
+### Part a.)
+Use rejection sampling to sample from the following density:
+        
+   $$ p(x)= |\text{sin}(x)|\times\mathbf{1}[0, 2\pi] $$
+    
+Generate at least 1000 true samples from the above density.  Compute and  report the Monte Carlo estimate of the upper and lower bound for the 50% quantile interval using the `quantile` function on your samples.  Compare this to the 50% HPD region calculated on the samples.  What are the bounds on the HPD region?  Report the length of the quantile interval and the total length of the HPD region. What explains the difference?  Hint: to compute the HPD use the `hdi` function from the `HDInterval` package.  As the first argument pass in `density(samples)`, where `samples` is the name of your vector of true samples from the density.  Set the `allowSplit` argument to true and use the `credMass` argument to set the total probability mass in the HPD region to 50%.
+
+```{r, results='markup'}
+p_sin <- function(x){
+  sample(abs(sin(x))/4)
+}
+
+sin_estimate <- rep(0, 1000)
+for(n in 1:1000) {
+  x <- runif(n)
+  w = p_sin(x) 
+  sin_estimate[n] <- sum(x*w)/sum(w)
+}
+
+hdi(p_sin(1:1000))
+```
+
+    
+### Part b.)
+Plot $p(x)$ using the `curve` function.  Add lines corresponding to the intervals / probability regions computed in the previous part to your plot using them `segments` function.  To ensure that the lines don't overlap visually, for the HPD region set `y0` and `y1` to 0 and for the quantile interval set `y0` and `y1` to 0.01.  Make the segments for HPD region colored red and the segment for quantile interval colored blue.
+    
+

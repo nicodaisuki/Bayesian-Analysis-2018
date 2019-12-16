@@ -1,0 +1,63 @@
+---
+title: "Pstat 115 HW5"
+author: "Kalvin Goode and Amil"
+date: "2018/11/16"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(tidyverse)
+set.seed(1)
+```
+
+2.
+(a).
+```{r}
+count1=560*0.25*0.07
+vote1=c(37,32,20,4)
+post1=vote1*560/100+count1
+cat("Our assumption for prior distribution is
+Dirichlet(",count1,",",count1,",",count1,",",count1,").
+Then, the posterior distribution is Dirichlet(",post1[1],",",post1[2],",",post1[3],",",post1[4],").")
+``` 
+
+(b).
+```{r}
+count2=c(0.1,0.7,0.2)*0.32*560+count1
+vote2=c(37,20,4)
+post2=vote2*560/100+count2
+probability=mean(rgamma(100000,post1)>rgamma(100000,post2))
+cat("Our assumption for prior distribution is
+Dirichlet(",count2[1],",",count2[2],",",count2[3],").
+The posterior distribution is Dirichlet(",post2[1],",",post2[2],",",post2[3],").
+In posterior distribution, the probability that more people in 
+Kansas support Pat Roberts than Greg Orman is ", probability,".")
+```
+
+(c).
+
+(i).
+```{r}
+count3=c(42,44,4)*623/100
+post3=post2+count3
+t1=rgamma(10000,post3[1])
+t2=rgamma(10000,post3[2])
+t3=rgamma(10000,post3[3])
+votes1=t1/(t1+t2+t3)*rbeta(10000,40,60)
+votes2=t2/(t1+t2+t3)*rbeta(10000,40,60)
+votes3=t3/(t1+t2+t3)*rbeta(10000,40,60)
+probability2=mean((votes1>0.2)&(votes1>votes2)&(votes1>votes3))
+cat("The posterior pridictive probility predicts that Greg Orman receives
+at least 20000 votes and wins the election is",probability2)
+```
+
+(ii).
+```{r}
+probability3=mean(abs(votes1-votes2)<votes3)
+cat("The posterior predictive probility predicts that the difference between Greg Orman
+and Pat Roberts is smaller than then vote total for Randall Batson is",probability3)
+```
+
+(d).
+One assumption is that each person voting for the candidate is identical independent distribution. We can improve model by studying the historical preferred party for any voter and also review historical rate of voting within a region.

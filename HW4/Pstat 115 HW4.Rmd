@@ -1,0 +1,68 @@
+---
+title: "Pstat 115 HW4"
+author: "Kalvin Goode and Amil"
+date: "2018/11/8"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(tidyverse)
+set.seed(1)
+```
+
+2. 
+
+(a)
+
+For rejection sampling, let $g(x|R)=\frac{1}{2R}\mathbf{1}_{[-R,R]}.$ 
+
+We see that, if $M=\frac{4}{\pi},$ then $p(x|R)=\frac{2}{\pi R^2}\sqrt{R^2-x^2}\mathbf{1}_{[-R,R]}\leq\frac{2}{\pi R}\mathbf{1}_{[-R,R]}=Mg(x|R)$.
+
+(b)
+
+```{r}
+p=function(x)
+{
+  if(x>1 | x< -1)
+    return (0)
+  return (2/pi*sqrt(1-x^2))
+}
+
+g=function(x)
+{
+  if(x>1 | x< -1)
+    return (0)
+  return (0.5)
+}
+h <- Vectorize(p);
+k <- Vectorize(g);
+curve(h,-1.5,1.5,n=200,xlab='x',ylab='y',main="Distributions")
+curve(k,add=TRUE,lty=3)
+```
+
+(c)
+
+```{r}
+R=seq(0.1,3,0.1)
+l=function(x,R)
+{
+  return(sqrt(R^2-x^2)/R/pi)
+}
+variances=function(R)
+{
+  s=5000
+  samples=runif(s,-R,R)
+  #runif is a uniform distribution
+  keep=l(samples,R)>runif(s)
+  return(var(samples[keep]))
+}
+m=function(x)
+{
+  return (x^2/4)
+}
+variance=sapply(R,variances)
+plot(R,variance)
+curve(m,add=TRUE)
+```
+
